@@ -1,0 +1,39 @@
+image: mcr.microsoft.com/playwright:v1.56.0-noble
+
+stages: [test]
+
+variables:
+  CI: 'true'
+  TEST_ENV: prod
+  npm_config_cache: '$CI_PROJECT_DIR/.npm'
+
+cache:
+  key: npm
+  paths: [.npm/]
+
+.playwright:
+  stage: test
+  before_script:
+    - npm install
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    paths: [playwright-report/, test-results/]
+    reports:
+      junit: test-results/junit.xml
+
+api:
+  extends: .playwright
+  script: npx playwright test --project=api
+
+ui:
+  extends: .playwright
+  parallel:
+    matrix:
+      - BROWSER: [chromium, firefox, webkit]
+  script: npx playwright test --project=$BROWSER
+
+performance:
+  extends: .playwright
+  allow_failure: true
+  script: npx playwright test --project=performance
